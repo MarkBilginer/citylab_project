@@ -16,13 +16,6 @@ public:
 private:
   void laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan);
   void publishCommand();
-  std::pair<int, int> calculateIndexRange(int range_size);
-  std::pair<float, int>
-  findMinimumDistance(const sensor_msgs::msg::LaserScan::SharedPtr &scan,
-                      int start_index, int end_index);
-  void
-  identifySafestDirection(const sensor_msgs::msg::LaserScan::SharedPtr &scan,
-                          int start_index, int end_index, int range_size);
 
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr subscriber_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;

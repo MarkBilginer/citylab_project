@@ -23,93 +23,92 @@ Patrol::Patrol() : Node("robot_patrol_node"), direction_(0.0) {
                                    timer_callback_group_); // timer for 10hz
 }
 
-double radiansToDegrees(double radians) { return radians * (180.0 / M_PI); }
-
-double degreesToRadians(double degrees) { return degrees * (M_PI / 180.0); }
-
 void Patrol::laserCallback(
     const sensor_msgs::msg::LaserScan::SharedPtr laser_data) {
+
   std::vector<float> ranges = laser_data->ranges;
+  int num_ranges = ranges.size();
 
-  int window_size = 100; // Size of the window to check around each angle
-  double safest_angle = 0.0;
-  double max_minimum_distance = -1.0;
+  // Middle index of the laser scan data
+  int middle_index = num_ranges / 2;
+  // Number of indices corresponding to 90 degrees on either side
+  int indices_for_90_degrees =
+      static_cast<int>(M_PI / 2 / laser_data->angle_increment);
 
-  // The actual indices should be adapted based on your laser scanner specs
-  int middle_index = ranges.size() / 2;
-  int half_window = window_size / 2;
+  // Calculate start and end index for the 180 degree view
+  int start_index = std::max(middle_index - indices_for_90_degrees,
+                             0); // Ensure we don't go below zero
+  int end_index =
+      std::min(middle_index + indices_for_90_degrees,
+               num_ranges - 1); // Ensure we don't go past the array size
 
-  for (int i = middle_index - (window_size * 2);
-       i <= middle_index + (window_size * 2); ++i) {
-    int start_index = i - half_window;
-    int end_index = i + half_window;
+  double obstacle_distance_threshold = 0.35; // 35 cm
+  int window_size = 100;
 
-    if (start_index < 0 || static_cast<size_t>(end_index) >= ranges.size()) {
-      continue; // Skip if the window extends beyond the range of indices
+  // Flag to determine if an obstacle is detected within the desired range
+  bool obstacle_detected = false;
+
+  for (int i = start_index; i <= end_index; i++) {
+    if (!std::isinf(ranges[i]) && ranges[i] < obstacle_distance_threshold) {
+      obstacle_detected = true;
+      break; // Stop checking once an obstacle is found
     }
+  }
+  // Check for obstacle directly in front
+  if (obstacle_detected) {
+    // Obstacle detected, find safest direction
+    double max_distance = 0.0;
+    int max_index = 0;
 
-    double min_distance = std::numeric_limits<double>::max();
+    // Only consider the front 180 degrees
+    for (int i = start_index; i <= end_index; i++) {
+      int window_start = std::max(i - window_size / 2, start_index);
+      int window_end = std::min(i + window_size / 2, end_index);
+      double window_min_distance = std::numeric_limits<double>::max();
 
-    for (int j = start_index; j <= end_index; ++j) {
-      double range = ranges[j];
-      if (!std::isinf(range) && range < min_distance) {
-        min_distance = range;
+      for (int j = window_start; j <= window_end; j++) {
+        if (!std::isinf(ranges[j]) && ranges[j] < window_min_distance) {
+          window_min_distance = ranges[j];
+        }
+      }
+
+      if (window_min_distance > max_distance) {
+        max_distance = window_min_distance;
+        max_index = i;
       }
     }
 
-    if (min_distance > max_minimum_distance) {
-      max_minimum_distance = min_distance;
-      safest_angle = laser_data->angle_min + i * laser_data->angle_increment;
+    // Calculate the safest angle
+    double safest_angle =
+        laser_data->angle_min + max_index * laser_data->angle_increment;
+    if (safest_angle < -M_PI / 2) {
+      safest_angle = -M_PI / 2;
+    } else if (safest_angle > M_PI / 2) {
+      safest_angle = M_PI / 2;
     }
-  }
 
-  direction_.store(
-      safest_angle); // Store the safest angle in an atomic variable
-  RCLCPP_DEBUG(
-      this->get_logger(),
-      "Safe direction set at angle [%f] with max minimum distance [%f]",
-      radiansToDegrees(safest_angle), max_minimum_distance);
+    // Store this angle in the class variable
+    direction_.store(safest_angle);
+  } else {
+    direction_.store(0.0);
+  }
 }
 
 void Patrol::publishCommand() {
-  RCLCPP_INFO(this->get_logger(), "Publishing command...");
+  //RCLCPP_INFO(this->get_logger(), "Publishing command...");
 
   geometry_msgs::msg::Twist cmd;
   cmd.linear.x = 0.1; // Always move forward at 0.1 m/s
 
-  // Base proportional gain
-  // double base_kp = 0.1;
-
-  // Boosting factor that decreases as distance increases
-  // double min_distance_boost =
-  // std::exp(5.0 / std::max(0.1, static_cast<double>(min_distance_)));
-
-  // Adaptive proportional gain
-  // double adaptive_kp = base_kp * min_distance_boost;
-
-  // Max angular velocity
-  // double max_angular_velocity = 1.5;
-
-  // cmd.angular.z = std::clamp(adaptive_kp * direction_, -max_angular_velocity,
-  //                          max_angular_velocity);
-
-  // cmd.angular.z = direction_ / 2;
-
-  // RCLCPP_INFO(this->get_logger(),
-  //"Command values - Linear X: %f, Angular Z: %f", cmd.linear.x,
-  // cmd.angular.z);
-  // velocity_msg.angular.z = (direction_/1.5); // simulation (COMMENT WHEN
-  // USING ACTUAL ROBOT)
-  cmd.angular.z =
-      (direction_ / 2.0);
-  RCLCPP_DEBUG(this->get_logger(), "direction_/2 = %f", direction_ / 2);
+  cmd.angular.z = (direction_ / 1.4);
+  //RCLCPP_INFO(this->get_logger(), "direction_/2 = %f", direction_ / 2.0);
 
   publisher_->publish(cmd);
 
   // It sleeps for wait_time_ seconds to maintain the control loop at 10 Hz.
   // sleep(this->wait_time_);
 
-  RCLCPP_INFO(this->get_logger(), "Command published successfully.");
+  //RCLCPP_INFO(this->get_logger(), "Command published successfully.");
 }
 
 int main(int argc, char **argv) {
