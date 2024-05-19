@@ -40,7 +40,6 @@ include_directories(include)
 
 # Declare a C++ executable
 add_executable(${PROJECT_NAME}_node src/patrol.cpp)
-
 ament_target_dependencies(${PROJECT_NAME}_node
   rclcpp
   std_msgs
@@ -49,9 +48,27 @@ ament_target_dependencies(${PROJECT_NAME}_node
   custom_interfaces
 )
 
+add_executable(direction_service_server_node src/direction_service.cpp)
+ament_target_dependencies(direction_service_server_node
+  rclcpp
+  std_msgs
+  sensor_msgs
+  custom_interfaces
+)
+
+add_executable(test_service_client_node src/test_service.cpp)
+ament_target_dependencies(test_service_client_node
+  rclcpp
+  #std_msgs
+  sensor_msgs
+  custom_interfaces
+)
+
 # Install the executable and necessary directories
 install(TARGETS
   ${PROJECT_NAME}_node
+  direction_service_server_node
+  test_service_client_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
