@@ -48,17 +48,20 @@ private:
 
     // Sum distances for left section
     for (size_t i = left_start; i <= left_end; ++i) {
-      total_dist_sec_left += ranges[i];
+      total_dist_sec_left +=
+          std::isinf(ranges[i]) ? laser_scan.range_max : ranges[i];
     }
 
     // Sum distances for front section (centered)
     for (size_t i = front_start; i <= front_end; ++i) {
-      total_dist_sec_front += ranges[i];
+      total_dist_sec_front +=
+          std::isinf(ranges[i]) ? laser_scan.range_max : ranges[i];
     }
 
     // Sum distances for right section
     for (size_t i = right_start; i <= right_end; ++i) {
-      total_dist_sec_right += ranges[i];
+      total_dist_sec_right +=
+          std::isinf(ranges[i]) ? laser_scan.range_max : ranges[i];
     }
 
     RCLCPP_INFO(
@@ -72,7 +75,8 @@ private:
     } else if (total_dist_sec_right > total_dist_sec_front &&
                total_dist_sec_right > total_dist_sec_left) {
       response->direction = "right";
-    } else {
+    } else if (total_dist_sec_front > total_dist_sec_right &&
+               total_dist_sec_front > total_dist_sec_left) {
       response->direction = "forward";
     }
 
