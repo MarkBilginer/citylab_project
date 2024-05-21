@@ -5,9 +5,6 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
-#include <atomic>
-#include <cmath>
-#include <limits>
 #include <memory>
 #include <mutex>
 #include <unistd.h>
@@ -20,7 +17,10 @@ public:
 
 private:
   void laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan);
-  void publishCommand();
+  void publishCommand(const std::string &direction);
+  void handleServiceFailure();
+  void handleNoDirection();
+  void switchToSafeMode();
 
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr subscriber_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
@@ -35,6 +35,8 @@ private:
   const std::chrono::milliseconds wait_time_{100}; // 10Hz
   sensor_msgs::msg::LaserScan last_laser_;
   std::mutex mutex_;
+  static constexpr int MAX_RETRIES_ = 3;
+  int retry_count_ = 0;
 };
 
 #endif // PATROL_WITH_SERVICE_H

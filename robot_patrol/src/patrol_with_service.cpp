@@ -24,16 +24,39 @@ Patrol::Patrol() : Node("robot_patrol_with_service_client_node") {
 
   client_ = this->create_client<custom_interfaces::srv::GetDirection>(
       "/direction_service", rmw_qos_profile_default, client_callback_group_);
-
-  // timer_ = this->create_wall_timer(this->wait_time_,
-  //                                std::bind(&Patrol::publishCommand, this),
-  //                              timer_callback_group_); // timer for 10hz
 }
 
 void Patrol::startTimer() {
   timer_ = this->create_wall_timer(
       std::chrono::milliseconds(100), // Adjust the interval as needed
-      std::bind(&Patrol::publishCommand, this), timer_callback_group_);
+      [this]() {
+        auto request =
+            std::make_shared<custom_interfaces::srv::GetDirection::Request>();
+        {
+          std::lock_guard<std::mutex> lock(mutex_);
+          request->laser_data = last_laser_;
+        }
+
+        auto response_received_callback =
+            [this](rclcpp::Client<
+                   custom_interfaces::srv::GetDirection>::SharedFuture future) {
+              try {
+                auto response = future.get();
+                if (!response->direction.empty()) {
+                  publishCommand(response->direction);
+                } else {
+                  handleNoDirection();
+                }
+              } catch (const std::exception &e) {
+                RCLCPP_ERROR(this->get_logger(), "Failed to get response: %s",
+                             e.what());
+                handleServiceFailure();
+              }
+            };
+
+        client_->async_send_request(request, response_received_callback);
+      },
+      timer_callback_group_);
 }
 
 bool Patrol::initialize() {
@@ -51,8 +74,41 @@ bool Patrol::initialize() {
                 "Waiting for the service to become available...");
     rclcpp::sleep_for(std::chrono::milliseconds(500)); // Backoff strategy
   }
+  retry_count_ = 0;
   RCLCPP_INFO(this->get_logger(), "Service is now available.");
   return true;
+}
+
+void Patrol::handleServiceFailure() {
+  if (retry_count_ < MAX_RETRIES_) {
+    RCLCPP_WARN(this->get_logger(),
+                "Attempting to reconnect to the service...");
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    retry_count_++;
+    initialize(); // Attempt to reconnect
+  } else {
+    RCLCPP_ERROR(
+        this->get_logger(),
+        "Service connection failed after retries. Switching to safe mode.");
+    switchToSafeMode(); // Implement this method to define safe behavior
+  }
+}
+
+void Patrol::handleNoDirection() {
+  RCLCPP_WARN(this->get_logger(),
+              "No valid direction determined. Stopping the robot.");
+  geometry_msgs::msg::Twist stop_command;
+  stop_command.linear.x = 0.0;
+  stop_command.angular.z = 0.0;
+  publisher_->publish(stop_command);
+}
+
+void Patrol::switchToSafeMode() {
+  RCLCPP_WARN(this->get_logger(), "Switching to safe mode.");
+  geometry_msgs::msg::Twist safe_command;
+  safe_command.linear.x = 0.0;
+  safe_command.angular.z = 0.0;
+  publisher_->publish(safe_command);
 }
 
 void Patrol::laserCallback(
@@ -61,36 +117,23 @@ void Patrol::laserCallback(
   last_laser_ = *laser_data;
 }
 
-void Patrol::publishCommand() {
-  auto request =
-      std::make_shared<custom_interfaces::srv::GetDirection::Request>();
-  // Make a local copy of last_laser_
-  sensor_msgs::msg::LaserScan local_laser;
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    request->laser_data = last_laser_;
+void Patrol::publishCommand(const std::string &direction) {
+  geometry_msgs::msg::Twist cmd;
+  if (direction == "forward") {
+    cmd.linear.x = 0.1;
+    cmd.angular.z = 0.0;
+  } else if (direction == "left") {
+    cmd.linear.x = 0.05;
+    cmd.angular.z = 0.7;
+  } else if (direction == "right") {
+    cmd.linear.x = 0.05;
+    cmd.angular.z = -0.7;
+  } else {
+    handleNoDirection();
+    return;
   }
-
-  // Asynchronously send the request and specify a callback function
-  using ServiceResponseFuture =
-      rclcpp::Client<custom_interfaces::srv::GetDirection>::SharedFuture;
-  auto response_received_callback = [this](ServiceResponseFuture future) {
-    auto response = future.get();
-    geometry_msgs::msg::Twist cmd;
-    if (response->direction == "forward") {
-      cmd.linear.x = 0.1;  // move forward at 0.1 m/s
-      cmd.angular.z = 0.0; // no rotation
-    } else if (response->direction == "left") {
-      cmd.linear.x = 0.1;
-      cmd.angular.z = 0.5; // rotate left
-    } else if (response->direction == "right") {
-      cmd.linear.x = 0.1;
-      cmd.angular.z = -0.5; // rotate right
-    }
-    publisher_->publish(cmd);
-  };
-
-  client_->async_send_request(request, response_received_callback);
+  publisher_->publish(cmd);
+  usleep(1000);
 }
 
 int main(int argc, char **argv) {

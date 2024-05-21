@@ -1,0 +1,88 @@
+
+    RCLCPP_INFO(this->get_logger(), "front_start: %zu, front_end: %zu",
+                front_start, front_end);
+    RCLCPP_INFO(this->get_logger(), "left_start: %zu, left_end: %zu",
+                left_start, left_end);
+    RCLCPP_INFO(this->get_logger(), "right_start: %zu, right_end: %zu",
+                right_start, right_end);
+
+    // Calculate indices for -90, +90, -180, +180, and 0 degrees
+    int index_front = middle_index;
+    int index_right = (num_points / 4) % num_points;
+    int index_left = (3 * num_points / 4) % num_points;
+    int index_back = (middle_index + middle_index) % num_points;
+
+    RCLCPP_INFO(this->get_logger(), "index at front (0 degrees): %d",
+                index_front);
+    RCLCPP_INFO(this->get_logger(), "index at left (-90 degrees): %d",
+                index_left);
+    RCLCPP_INFO(this->get_logger(), "index at right (+90 degrees): %d",
+                index_right);
+    RCLCPP_INFO(this->get_logger(), "index at back (180 degrees): %d",
+                index_back);
+    // Log the values at these angles
+    RCLCPP_INFO(this->get_logger(), "Range size: %d",
+                static_cast<int>(num_points));
+    RCLCPP_INFO(this->get_logger(), "Range at front (0 degrees): %f",
+                ranges[index_front]);
+    RCLCPP_INFO(this->get_logger(), "Range at left (-90 degrees): %f",
+                ranges[index_left]);
+    RCLCPP_INFO(this->get_logger(), "Range at right (+90 degrees): %f",
+                ranges[index_right]);
+    RCLCPP_INFO(this->get_logger(), "Range at back (180 degrees): %f",
+                ranges[index_back]);
+
+    RCLCPP_INFO(this->get_logger(), "laser_scan.range_max: %f",
+                laser_scan.range_max);
+    add_distance(left_start, left_end, total_dist_sec_left);
+    add_distance(front_start, front_end, total_dist_sec_front);
+    add_distance(right_start, right_end, total_dist_sec_right);
+
+    in the simulation corresponds to:
+
+    [direction_service_server_node-1] [INFO] [1716299864.942985042] [direction_service]: laser_scan.range_max: 30.000000
+[direction_service_server_node-1] [INFO] [1716299864.942996327] [direction_service]: Distance Totals - Left: 148.555910,Front: 177.192830, Right: 59.797675
+[direction_service_server_node-1] [INFO] [1716299864.943031832] [direction_service]: Determined safest direction: forward
+[direction_service_server_node-1] [INFO] [1716299865.143456480] [direction_service]: front_start: 275, front_end: 385
+[direction_service_server_node-1] [INFO] [1716299865.143529832] [direction_service]: left_start: 385, left_end: 495
+[direction_service_server_node-1] [INFO] [1716299865.143545456] [direction_service]: right_start: 165, right_end: 275
+[direction_service_server_node-1] [INFO] [1716299865.143557592] [direction_service]: index at front (0 degrees): 330
+[direction_service_server_node-1] [INFO] [1716299865.143586643] [direction_service]: index at left (-90 degrees): 495
+[direction_service_server_node-1] [INFO] [1716299865.143599782] [direction_service]: index at right (+90 degrees): 165
+[direction_service_server_node-1] [INFO] [1716299865.143613140] [direction_service]: index at back (180 degrees): 0
+[direction_service_server_node-1] [INFO] [1716299865.143629211] [direction_service]: Range size: 660
+[direction_service_server_node-1] [INFO] [1716299865.143642740] [direction_service]: Range at front (0 degrees): 1.909739
+[direction_service_server_node-1] [INFO] [1716299865.143658487] [direction_service]: Range at left (-90 degrees): 1.391905
+[direction_service_server_node-1] [INFO] [1716299865.143672556] [direction_service]: Range at right (+90 degrees): 0.435027
+[direction_service_server_node-1] [INFO] [1716299865.143687010] [direction_service]: Range at back (180 degrees): 0.16091
+
+
+in real robot lab:
+[direction_service_server_node-1] [INFO] [1716304541.804588683] [direction_service_server]: Determined safest direction: forward
+[direction_service_server_node-1] [INFO] [1716304541.904378811] [direction_service_server]: front_start: 300, front_end: 420
+[direction_service_server_node-1] [INFO] [1716304541.904435775] [direction_service_server]: left_start: 421, left_end: 540
+[direction_service_server_node-1] [INFO] [1716304541.904447945] [direction_service_server]: right_start: 180, right_end: 299
+[direction_service_server_node-1] [INFO] [1716304541.904457224] [direction_service_server]: index at front (0 degrees): 360
+[direction_service_server_node-1] [INFO] [1716304541.904467144] [direction_service_server]: index at left (-90 degrees): 540
+[direction_service_server_node-1] [INFO] [1716304541.904476308] [direction_service_server]: index at right (+90 degrees): 180
+[direction_service_server_node-1] [INFO] [1716304541.904485281] [direction_service_server]: index at back (180 degrees): 0
+[direction_service_server_node-1] [INFO] [1716304541.904494029] [direction_service_server]: Range size: 720
+[direction_service_server_node-1] [INFO] [1716304541.904502848] [direction_service_server]: Range at front (0 degrees): 1.352000
+[direction_service_server_node-1] [INFO] [1716304541.904514041] [direction_service_server]: Range at left (-90 degrees): 1.148000
+[direction_service_server_node-1] [INFO] [1716304541.904523235] [direction_service_server]: Range at right (+90 degrees): 0.858000
+[direction_service_server_node-1] [INFO] [1716304541.904532646] [direction_service_server]: Range at back (180 degrees): 0.864000
+[direction_service_server_node-1] [INFO] [1716304541.904545188] [direction_service_server]: Distance Totals - Left: 176.258001, Front: 315.880999, Right: 119.020000
+[direction_service_server_node-1] [INFO] [1716304541.904560465] [direction_service_server]: Determined safest direction: forward
+[direction_service_server_node-1] [INFO] [1716304542.004397989] [direction_service_server]: front_start: 300, front_end: 420
+[direction_service_server_node-1] [INFO] [1716304542.004466980] [direction_service_server]: left_start: 421, left_end: 540
+[direction_service_server_node-1] [INFO] [1716304542.004479816] [direction_service_server]: right_start: 180, right_end: 299
+[direction_service_server_node-1] [INFO] [1716304542.004489327] [direction_service_server]: index at front (0 degrees): 360
+[direction_service_server_node-1] [INFO] [1716304542.004498705] [direction_service_server]: index at left (-90 degrees): 540
+[direction_service_server_node-1] [INFO] [1716304542.004507501] [direction_service_server]: index at right (+90 degrees): 180
+[direction_service_server_node-1] [INFO] [1716304542.004516835] [direction_service_server]: index at back (180 degrees): 0
+[direction_service_server_node-1] [INFO] [1716304542.004525876] [direction_service_server]: Range size: 720
+[direction_service_server_node-1] [INFO] [1716304542.004535003] [direction_service_server]: Range at front (0 degrees): 1.336000
+[direction_service_server_node-1] [INFO] [1716304542.004545975] [direction_service_server]: Range at left (-90 degrees): 1.158000
+[direction_service_server_node-1] [INFO] [1716304542.004554778] [direction_service_server]: Range at right (+90 degrees): 0.876000
+[direction_service_server_node-1] [INFO] [1716304542.004563860] [direction_service_server]: Range at back (180 degrees): 0.878000
+[direction_service_server_node-1] [INFO] [1716304542.004575792] [direction_service_server]: Distance Totals - Left: 174.978000, Front: 335.345000, Right: 118.466000
