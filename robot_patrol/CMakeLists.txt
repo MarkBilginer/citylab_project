@@ -20,8 +20,10 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(custom_interfaces REQUIRED)
+find_package(rclcpp_action REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -72,6 +74,8 @@ ament_target_dependencies(robot_patrol_with_service_client_node
   custom_interfaces
 )
 
+add_executable(go_to_pose_action src/go_to_pose_action.cpp)
+ament_target_dependencies(go_to_pose_action rclcpp geometry_msgs nav_msgs rclcpp_action)
 
 # Install the executable and necessary directories
 install(TARGETS
@@ -79,6 +83,7 @@ install(TARGETS
   direction_service_server_node
   test_service_client_node
   robot_patrol_with_service_client_node
+  go_to_pose_action
   DESTINATION lib/${PROJECT_NAME}
 )
 
