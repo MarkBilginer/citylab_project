@@ -1,0 +1,8 @@
+# Goal definition
+geometry_msgs/Pose2D goal_pos
+---
+# Result definition
+bool status
+---
+# Feedback definition
+geometry_msgs/Pose2D current_pos

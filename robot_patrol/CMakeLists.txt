@@ -24,6 +24,8 @@ find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(custom_interfaces REQUIRED)
 find_package(rclcpp_action REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -74,8 +76,16 @@ ament_target_dependencies(robot_patrol_with_service_client_node
   custom_interfaces
 )
 
-add_executable(go_to_pose_action src/go_to_pose_action.cpp)
-ament_target_dependencies(go_to_pose_action rclcpp geometry_msgs nav_msgs rclcpp_action)
+add_executable(go_to_pose_action_server_node src/go_to_pose_action.cpp)
+ament_target_dependencies(go_to_pose_action_server_node
+ rclcpp
+ geometry_msgs
+ nav_msgs
+ custom_interfaces
+ rclcpp_action
+ tf2
+ tf2_geometry_msgs
+)
 
 # Install the executable and necessary directories
 install(TARGETS
@@ -83,7 +93,7 @@ install(TARGETS
   direction_service_server_node
   test_service_client_node
   robot_patrol_with_service_client_node
-  go_to_pose_action
+  go_to_pose_action_server_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
